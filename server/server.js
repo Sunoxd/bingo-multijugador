@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import Card from './models/Card.js';
 import { checkBingo } from './utils/bingoUtils.js';
+import seedDB from './seed.js';
 
 dotenv.config();
 const app = express();
@@ -16,11 +17,14 @@ const io = new Server(httpServer, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// Conexión a MongoDB Atlas
-const mongoURI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/bingo-db';
+const mongoURI = process.env.MONGO_URI;
+
 mongoose.connect(mongoURI)
-  .then(() => console.log('🚀 Conectado a MongoDB Atlas'))
-  .catch(err => console.error('❌ Error de conexión:', err));
+  .then(async () => {
+    console.log('🚀 Conectado a MongoDB Atlas');
+    await seedDB();
+  })
+  .catch(err => console.error('❌ Error DB:', err));
 
 let gameState = { drawnNumbers: [], isGameOver: false, winner: null, winnerCardIndex: null };
 
@@ -62,14 +66,10 @@ io.on('connection', (socket) => {
             gameState.isGameOver = true;
             gameState.winner = playerName;
             gameState.winnerCardIndex = cardNumber;
-            io.emit('game_over', { 
-                winner: playerName, 
-                cardNumber: cardNumber,
-                winningMatrix: card.matrix 
-            });
+            io.emit('game_over', { winner: playerName, cardNumber, winningMatrix: card.matrix });
         }
     });
 });
 
 const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, '0.0.0.0', () => console.log(`🔥 Servidor en puerto ${PORT}`));
+httpServer.listen(PORT, '0.0.0.0', () => console.log(`🔥 Puerto: ${PORT}`));
